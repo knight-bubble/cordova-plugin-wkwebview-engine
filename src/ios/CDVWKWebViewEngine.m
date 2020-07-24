@@ -458,6 +458,30 @@ static void * KVOContext = &KVOContext;
     return decisionHandler(NO);
 }
 
+-(void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)navigationResponse decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler
+{
+    if (@available(iOS 12.0, *)) {//IOS 11 also has this access method, but when I use IOS 11 system, I can directly access it in response, only IOS 12 can not access it
+        WKHTTPCookieStore *cookieStore = webView.configuration.websiteDataStore.httpCookieStore;
+        [cookieStore getAllCookies:^(NSArray* cookies) {
+            [self setCookie:cookies];
+        }];
+    } else {
+        NSHTTPURLResponse *response = (NSHTTPURLResponse *)navigationResponse.response;
+        NSArray *cookies =[NSHTTPCookie cookiesWithResponseHeaderFields:[response allHeaderFields] forURL:response.URL];
+        [self setCookie:cookies];
+    }
+    
+    decisionHandler(WKNavigationResponsePolicyAllow);
+}
+
+-(void)setCookie:(NSArray *)cookies {
+    if (cookies.count > 0) {
+        for (NSHTTPCookie *cookie in cookies) {
+            [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookie:cookie];
+        }
+    }
+}
+
 #pragma mark - Plugin interface
 
 - (void)allowsBackForwardNavigationGestures:(CDVInvokedUrlCommand*)command;
